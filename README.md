@@ -65,3 +65,22 @@ Only users whose email is in `Admin:AllowedAdminEmails` see “Admin: Cards” a
 - `POST /api/usercards/:id/benefits/:benefitId/claim` – record benefit usage for the current period (month/quarter/year).
 
 Benefits use a period key (e.g. `2024-05`, `2024-Q1`, `2024`) so “Available” vs “Used” resets correctly by frequency.
+
+## GitHub Pages (UI only)
+
+The Angular UI can be deployed to GitHub Pages so it's available at **https://harsha-sanam.github.io/credit-card-app/**.
+
+1. **Enable Pages from Actions**  
+   In your repo: **Settings → Pages → Build and deployment → Source**: choose **GitHub Actions**.
+
+2. **Push to `main`**  
+   Pushing to `main` runs the workflow in `.github/workflows/deploy-pages.yml`: it builds the client with base href `/credit-card-app/` and deploys the output to GitHub Pages.
+
+3. **Optional – local build**  
+   To build the same artifact locally:
+   ```bash
+   cd client && npm run build:gh-pages
+   ```
+   Output is in `client/dist/client/browser`.
+
+**Note:** Only the UI is hosted on GitHub Pages. The API and MongoDB must be hosted elsewhere (e.g. Render, Fly.io, MongoDB Atlas). Set the production API URL and Google Client ID in `client/src/environments/environment.production.ts` (or use build-time env) and ensure your API allows the origin `https://harsha-sanam.github.io`.

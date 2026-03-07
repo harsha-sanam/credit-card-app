@@ -1,5 +1,6 @@
-# Build and deploy Angular UI to GitHub Pages
-# Site will be at https://harsha-sanam.github.io/credit-card-app/
+# Build Angular UI and push to docs/ folder for GitHub Pages
+# In repo Settings → Pages → Source: Deploy from a branch → Branch: main → Folder: /docs
+# Site: https://harsha-sanam.github.io/credit-card-app/
 
 name: Deploy to GitHub Pages
 
@@ -9,16 +10,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  contents: write
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -39,21 +34,16 @@ jobs:
         run: npx ng build --configuration=production --base-href /credit-card-app/
         working-directory: client
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
+      - name: Copy build to docs
+        run: |
+          rm -rf docs
+          mkdir -p docs
+          cp -r client/dist/client/browser/. docs/
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: client/dist/client/browser
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Commit and push docs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add docs
+          git diff --staged --quiet || git commit -m "Deploy: update docs with latest UI build [skip ci]"
+          git push

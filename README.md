@@ -68,19 +68,20 @@ Benefits use a period key (e.g. `2024-05`, `2024-Q1`, `2024`) so “Available”
 
 ## GitHub Pages (UI only)
 
-The Angular UI can be deployed to GitHub Pages so it's available at **https://harsha-sanam.github.io/credit-card-app/**.
+The Angular UI is built and pushed to the **`docs/`** folder so it can be served from GitHub Pages at **https://harsha-sanam.github.io/credit-card-app/**.
 
-1. **Enable Pages from Actions**  
-   In your repo: **Settings → Pages → Build and deployment → Source**: choose **GitHub Actions**.
+1. **Use the `docs` folder as the Pages source**  
+   In your repo: **Settings → Pages → Build and deployment → Source**: choose **Deploy from a branch**. Set **Branch** to `main` and **Folder** to **`/docs`**. Save.
 
 2. **Push to `main`**  
-   Pushing to `main` runs the workflow in `.github/workflows/deploy-pages.yml`: it builds the client with base href `/credit-card-app/` and deploys the output to GitHub Pages.
+   The workflow in `.github/workflows/deploy-pages.yml` runs on push to `main`: it builds the client with base href `/credit-card-app/`, copies the output to `docs/`, and commits and pushes `docs/`. After the first run, the UI will be live at the URL above.
 
-3. **Optional – local build**  
-   To build the same artifact locally:
+3. **Optional – local build and copy to docs**  
+   To build and update docs locally:
    ```bash
    cd client && npm run build:gh-pages
+   rm -rf ../docs && mkdir -p ../docs && cp -r dist/client/browser/. ../docs/
    ```
-   Output is in `client/dist/client/browser`.
+   Then commit and push the `docs/` folder.
 
 **Note:** Only the UI is hosted on GitHub Pages. The API and MongoDB must be hosted elsewhere (e.g. Render, Fly.io, MongoDB Atlas). Set the production API URL and Google Client ID in `client/src/environments/environment.production.ts` (or use build-time env) and ensure your API allows the origin `https://harsha-sanam.github.io`.

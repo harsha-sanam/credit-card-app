@@ -1,0 +1,42 @@
+<div class="min-h-screen bg-slate-50">
+  <nav class="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between">
+    <a routerLink="/dashboard" class="font-semibold text-slate-800">← Back to Dashboard</a>
+  </nav>
+
+  <main class="p-4 max-w-4xl mx-auto">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-xl font-semibold text-slate-800">Master Cards (Admin)</h1>
+      <a routerLink="/admin/cards/new" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Add Card</a>
+    </div>
+
+    @if (loading) {
+      <p class="text-slate-500">Loading...</p>
+    } @else if (cards.length === 0) {
+      <p class="text-slate-600">No master cards yet. <a routerLink="/admin/cards/new" class="text-indigo-600 hover:underline">Create one</a>.</p>
+    } @else {
+      <ul class="space-y-4">
+        @for (card of cards; track card.id) {
+          <li class="bg-white rounded-xl border border-slate-200 p-4">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 class="font-semibold text-slate-800">{{ card.cardName }}</h2>
+                <p class="text-sm text-slate-500">{{ card.bank }} · ${{ card.annualFee }}/yr · {{ card.benefits.length }} benefits</p>
+              </div>
+              <div class="flex gap-2">
+                <a [routerLink]="['/admin/cards', card.id]" class="px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">Edit</a>
+                <button
+                  type="button"
+                  (click)="delete(card.id)"
+                  [disabled]="deletingId === card.id"
+                  class="px-3 py-1.5 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 disabled:opacity-50"
+                >
+                  {{ deletingId === card.id ? '...' : 'Delete' }}
+                </button>
+              </div>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </main>
+</div>

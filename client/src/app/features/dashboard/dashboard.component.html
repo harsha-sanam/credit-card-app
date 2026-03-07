@@ -1,0 +1,214 @@
+<div class="min-h-screen bg-slate-50">
+  <nav class="bg-white border-b border-slate-200 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+    <a routerLink="/dashboard" class="font-semibold text-slate-800">Credit Card Benefit Tracker</a>
+    <div class="flex items-center gap-4">
+      <label class="text-sm text-slate-600 flex items-center gap-2">
+        <span class="hidden sm:inline">Year</span>
+        <select
+          class="border border-slate-300 rounded-lg px-2 py-1 text-sm bg-white"
+          [value]="selectedYear"
+          (change)="onYearChange($any($event.target).value)"
+        >
+          @for (y of availableYears; track y) {
+            <option [value]="y">{{ y }}</option>
+          }
+        </select>
+      </label>
+      <span class="text-slate-600 text-sm">{{ user?.email }}</span>
+      <a routerLink="/dashboard/add-card" class="text-sm text-indigo-600 hover:underline">Add Card</a>
+      @if (user?.isAdmin) {
+        <a routerLink="/admin/cards" class="text-sm text-amber-600 hover:underline">Admin: Cards</a>
+      }
+      <button type="button" (click)="logout()" class="text-sm text-slate-500 hover:text-slate-700">Logout</button>
+    </div>
+  </nav>
+
+  <main class="p-4 max-w-4xl mx-auto">
+    <h1 class="text-xl font-semibold text-slate-800 mb-6">My Wallet</h1>
+
+    @if (loading) {
+      <p class="text-slate-500">Loading your cards...</p>
+    } @else if (cards.length === 0) {
+      <div class="bg-white rounded-lg border border-slate-200 p-8 text-center text-slate-600">
+        <p class="mb-4">You haven't added any cards yet.</p>
+        <a routerLink="/dashboard/add-card" class="inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Add a Card</a>
+      </div>
+    } @else {
+      @if (selectedYear === currentYear && availableBenefits.length > 0) {
+        <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-4 mb-6 text-white shadow-lg">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="font-semibold text-lg">Ready to Claim</h2>
+            <span class="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">${{ availableBenefitsTotalValue }} available</span>
+          </div>
+          <ul class="space-y-2">
+            @for (item of availableBenefits; track item.benefit.id + item.periodKey) {
+              <li class="flex items-center justify-between gap-2 bg-white/10 rounded-lg px-3 py-2">
+                <div>
+                  <span class="font-medium">{{ item.benefit.name }}</span>
+                  <span class="text-white/80 text-sm ml-2">{{ formatBenefitValue(item.displayValue) }}</span>
+                  <span class="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full ml-2">{{ formatPeriodKey(item.periodKey, item.benefit.frequency) }}</span>
+                  <span class="text-white/60 text-xs ml-2">· {{ item.cardName }}</span>
+                </div>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="px-3 py-1 text-sm bg-white text-indigo-600 rounded-lg hover:bg-indigo-50 disabled:opacity-50 font-medium"
+                    [disabled]="summaryClaimingId === item.benefit.id + item.periodKey"
+                    (click)="claimFromSummary(item)"
+                  >
+                    {{ summaryClaimingId === item.benefit.id + item.periodKey ? '...' : 'Claim' }}
+                  </button>
+                  <button
+                    type="button"
+                    class="px-2 py-1 text-sm text-white/70 hover:text-white hover:bg-white/10 rounded-lg disabled:opacity-50"
+                    [disabled]="summaryDismissingId === item.benefit.id + item.periodKey"
+                    (click)="dismissFromSummary(item)"
+                    title="Hide this benefit"
+                  >
+                    {{ summaryDismissingId === item.benefit.id + item.periodKey ? '...' : '✕' }}
+                  </button>
+                </div>
+              </li>
+            }
+          </ul>
+        </div>
+      } @else if (selectedYear === currentYear && cards.length > 0) {
+        <div class="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-green-800">
+          <div class="flex items-center gap-2">
+            <span class="text-green-600 text-xl">✓</span>
+            <span class="font-medium">All caught up! No benefits to claim right now.</span>
+          </div>
+        </div>
+      }
+
+      <div class="space-y-6">
+        @for (item of cards; track item.userCard.id) {
+          <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+            <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-start justify-between gap-2">
+              <div>
+                <h2 class="font-semibold text-slate-800">{{ item.userCard.cardName || item.masterCard?.cardName }}</h2>
+                <p class="text-sm text-slate-500">
+                  {{ item.masterCard?.bank }} · ${{ item.masterCard?.annualFee }}/yr
+                  @if (item.masterCard?.isAnniversaryBased && item.userCard.anniversaryDate) {
+                    · Anniversary: {{ item.userCard.anniversaryDate | date:'MMM d' }}
+                  }
+                </p>
+              </div>
+              <button
+                type="button"
+                (click)="confirmRemoveCard(item)"
+                class="text-xs text-slate-400 hover:text-red-600"
+                title="Remove from wallet"
+              >
+                Remove
+              </button>
+            </div>
+            <ul class="divide-y divide-slate-100">
+              @for (benefit of item.masterCard?.benefits ?? []; track benefit.id) {
+                <li class="px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <button
+                      type="button"
+                      class="font-medium text-slate-800 hover:underline text-left"
+                      (click)="openBenefitHistory(item, benefit)"
+                    >{{ benefit.name }}</button>
+                    <span class="text-slate-500 text-sm ml-2">{{ formatBenefitValue(getBenefitDisplayValue(benefit, getSelectedYearPeriodKey(benefit.frequency))) }}{{ getFrequencyAbbrev(benefit.frequency) }}</span>
+                    @if (benefit.description) {
+                      <p class="text-sm text-slate-500 mt-0.5">{{ benefit.description }}</p>
+                    }
+                  </div>
+                  <div class="flex items-center gap-2">
+                    @if (isUsed(benefit, item.userCard.benefitUsages)) {
+                      <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Used</span>
+                    } @else {
+                      <span class="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Available</span>
+                      <button
+                        type="button"
+                        (click)="claim(item.userCard.id, benefit)"
+                        [disabled]="claimingId === benefit.id"
+                        class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                      >
+                        {{ claimingId === benefit.id ? '...' : 'Claimed' }}
+                      </button>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          </div>
+        }
+      </div>
+    }
+  </main>
+
+  @if (modalOpen && modalCard && modalBenefit) {
+    <div class="fixed inset-0 z-50">
+      <div class="absolute inset-0 bg-black/40" (click)="closeModal()"></div>
+      <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center p-4">
+        <div class="w-full sm:max-w-lg bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-200 flex items-start justify-between gap-3">
+            <div>
+              <h3 class="font-semibold text-slate-900">{{ modalBenefit.name }}</h3>
+              <p class="text-sm text-slate-500">
+                {{ modalCard.userCard.cardName || modalCard.masterCard?.cardName }} · {{ modalBenefit.frequency }}
+              </p>
+            </div>
+            <button type="button" class="text-slate-500 hover:text-slate-700" (click)="closeModal()">✕</button>
+          </div>
+
+          <div class="p-4 max-h-[70vh] overflow-auto">
+            <p class="text-sm text-slate-600 mb-3">
+              Showing {{ selectedYear }}. You can backfill the previous calendar year (relative to when the card was added).
+            </p>
+            @if (modalSummary) {
+              <div class="mb-3 flex flex-wrap gap-2 text-sm">
+                <span class="px-2 py-1 rounded-full bg-green-100 text-green-800">Claimed: {{ modalSummary.claimed }} (${{ modalSummary.claimedValue }})</span>
+                <span class="px-2 py-1 rounded-full bg-amber-100 text-amber-800">Missed: {{ modalSummary.missed }}</span>
+                <span class="px-2 py-1 rounded-full bg-slate-100 text-slate-700">Total periods: {{ modalSummary.total }}</span>
+              </div>
+            }
+
+            <ul class="space-y-2">
+              @for (p of modalPeriods; track p.periodKey) {
+                <li class="flex items-center justify-between gap-2 border border-slate-200 rounded-lg px-3 py-2">
+                  <div>
+                    <div class="font-medium text-slate-800">{{ formatPeriodKey(p.periodKey, modalBenefit.frequency) }} <span class="text-slate-500 font-normal">{{ formatBenefitValue(getBenefitDisplayValue(modalBenefit, p.periodKey)) }}</span></div>
+                    @if (p.claimed && p.claimedAt) {
+                      <div class="text-xs text-slate-500">Claimed at: {{ p.claimedAt | date:'short' }}</div>
+                    }
+                    @if (!p.claimable && p.note) {
+                      <div class="text-xs text-slate-500">{{ p.note }}</div>
+                    }
+                  </div>
+                  <div class="flex items-center gap-2">
+                    @if (p.claimed) {
+                      <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Claimed</span>
+                      <button
+                        type="button"
+                        class="px-2 py-1 text-xs text-red-600 hover:text-red-800 hover:underline disabled:opacity-50"
+                        [disabled]="modalUnclaimingKey === p.periodKey"
+                        (click)="unclaimForPeriod(p.periodKey)"
+                      >
+                        {{ modalUnclaimingKey === p.periodKey ? '...' : 'Undo' }}
+                      </button>
+                    } @else {
+                      <span class="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Missed</span>
+                      <button
+                        type="button"
+                        class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
+                        [disabled]="!p.claimable || modalClaimingKey === p.periodKey"
+                        (click)="claimForPeriod(p.periodKey)"
+                      >
+                        {{ modalClaimingKey === p.periodKey ? '...' : 'Mark claimed' }}
+                      </button>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

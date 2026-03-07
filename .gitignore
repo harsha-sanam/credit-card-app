@@ -1,0 +1,26 @@
+# Backend
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.csproj.user
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+
+# Frontend
+client/node_modules/
+client/dist/
+client/.angular/
+*.tsbuildinfo
+
+# IDE
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Env (optional - remove if you want to commit env)
+# client/src/environments/environment.ts
+# client/src/environments/environment.production.ts

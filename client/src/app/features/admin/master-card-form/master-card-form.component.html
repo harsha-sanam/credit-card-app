@@ -1,0 +1,98 @@
+<div class="min-h-screen bg-slate-50">
+  <nav class="bg-white border-b border-slate-200 px-4 py-3">
+    <a routerLink="/admin/cards" class="font-semibold text-slate-800">← Back to Master Cards</a>
+  </nav>
+
+  <main class="p-4 max-w-2xl mx-auto">
+    <h1 class="text-xl font-semibold text-slate-800 mb-6">{{ id ? 'Edit' : 'New' }} Master Card</h1>
+
+    @if (loading) {
+      <p class="text-slate-500">Loading...</p>
+    } @else {
+      <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-6">
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Card Name</label>
+          <input formControlName="cardName" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+          @if (form.get('cardName')?.invalid && form.get('cardName')?.touched) {
+            <p class="text-red-600 text-sm mt-1">Required</p>
+          }
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Bank</label>
+          <input formControlName="bank" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+          @if (form.get('bank')?.invalid && form.get('bank')?.touched) {
+            <p class="text-red-600 text-sm mt-1">Required</p>
+          }
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-slate-700 mb-1">Annual Fee ($)</label>
+          <input formControlName="annualFee" type="number" min="0" step="0.01" class="w-full rounded-lg border border-slate-300 px-3 py-2" />
+        </div>
+
+        <div class="flex items-center gap-3">
+          <input formControlName="isAnniversaryBased" type="checkbox" id="isAnniversaryBased" class="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500" />
+          <label for="isAnniversaryBased" class="text-sm text-slate-700">Benefits are based on card anniversary year (not calendar year)</label>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="block text-sm font-medium text-slate-700">Benefits</label>
+            <button type="button" (click)="addBenefit()" class="text-sm text-indigo-600 hover:underline">+ Add Benefit</button>
+          </div>
+          <div formArrayName="benefits" class="space-y-4">
+            @for (b of benefits.controls; track b; let i = $index) {
+              <div [formGroupName]="i" class="bg-white rounded-lg border border-slate-200 p-4">
+                <div class="grid gap-3 sm:grid-cols-2">
+                  <input formControlName="name" placeholder="Name" class="rounded border border-slate-300 px-3 py-2" />
+                  <input formControlName="value" placeholder="Default value (e.g. $15)" class="rounded border border-slate-300 px-3 py-2" />
+                </div>
+                <div class="mt-3 flex flex-wrap gap-2 items-center">
+                  <select formControlName="frequency" class="rounded border border-slate-300 px-3 py-2 text-sm">
+                    @for (f of frequencies; track f) {
+                      <option [value]="f">{{ f }}</option>
+                    }
+                  </select>
+                  <input formControlName="description" placeholder="Description" class="flex-1 min-w-[120px] rounded border border-slate-300 px-3 py-2 text-sm" />
+                  <button type="button" (click)="removeBenefit(i)" class="text-red-600 text-sm hover:underline">Remove</button>
+                </div>
+                <div class="mt-3 pt-3 border-t border-slate-100">
+                  <p class="text-xs font-medium text-slate-500 mb-2">Period value overrides (e.g. December $25)</p>
+                  @if (getOverrides(i).length) {
+                    <ul class="mb-2 space-y-1">
+                      @for (ov of getOverrides(i).controls; track ov; let j = $index) {
+                        <li class="flex items-center gap-2 text-sm">
+                          <span class="text-slate-700">{{ getPeriodLabel(b.get('frequency')?.value, ov.get('periodSubKey')?.value) }}:</span>
+                          <span class="text-slate-800">{{ ov.get('value')?.value }}</span>
+                          <button type="button" (click)="removeOverride(i, j)" class="text-red-500 hover:underline text-xs">Remove</button>
+                        </li>
+                      }
+                    </ul>
+                  }
+                  @if (getOverrideOptions(b.get('frequency')?.value, i).length) {
+                    <div class="flex flex-wrap gap-2 items-center">
+                      <select formControlName="newOverrideSubKey" class="rounded border border-slate-300 px-2 py-1 text-sm">
+                        <option value="">Select period…</option>
+                        @for (opt of getOverrideOptions(b.get('frequency')?.value, i); track opt.key) {
+                          <option [value]="opt.key">{{ opt.label }}</option>
+                        }
+                      </select>
+                      <input formControlName="newOverrideValue" placeholder="Value (e.g. $25)" class="rounded border border-slate-300 px-2 py-1 text-sm w-24" />
+                      <button type="button" (click)="addOverrideFromPending(i)" class="text-sm text-indigo-600 hover:underline">Add override</button>
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+
+        <div class="flex gap-2">
+          <button type="submit" [disabled]="saving || form.invalid" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+            {{ saving ? 'Saving...' : (id ? 'Update' : 'Create') }}
+          </button>
+          <a routerLink="/admin/cards" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200">Cancel</a>
+        </div>
+      </form>
+    }
+  </main>
+</div>

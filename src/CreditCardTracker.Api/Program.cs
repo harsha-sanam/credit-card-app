@@ -76,6 +76,9 @@ app.UseSwaggerUI();
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Root: so visiting the base URL doesn't 404 (e.g. on Render)
+app.MapGet("/", () => Results.Ok(new { api = "CreditCardTracker", health = "/api/health", docs = "/swagger" })).AllowAnonymous();
+
 // Health check so you can confirm the API is reachable (no auth required)
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok", api = "CreditCardTracker" })).AllowAnonymous();
 

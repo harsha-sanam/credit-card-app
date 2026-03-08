@@ -100,15 +100,18 @@ export class DashboardComponent implements OnInit {
       const dismissed = item.userCard.dismissedBenefits ?? [];
 
       for (const benefit of item.masterCard.benefits) {
-        // Get the current period key for this benefit's frequency
-        const periodKey = this.periodKey.getCurrentPeriodKey(benefit.frequency as BenefitFrequency);
+        const freq = benefit.frequency as BenefitFrequency;
+        const useAnniversaryYear = (item.masterCard.isAnniversaryBased && item.userCard.anniversaryDate) &&
+          (freq === 'Yearly' || freq === 'CalendarYear');
 
-        // For anniversary-based cards, only show if current period falls in the card's current anniversary year
-        if (item.masterCard.isAnniversaryBased && item.userCard.anniversaryDate) {
+        // For yearly on anniversary card use anniversary year as period key; else use calendar period
+        let periodKey: string;
+        if (useAnniversaryYear && item.userCard.anniversaryDate) {
           const annDate = new Date(item.userCard.anniversaryDate);
           const currentAnnYear = this.periodKey.getAnniversaryYearStart(annDate);
-          const periodAnnYear = this.periodKey.getAnniversaryYearStartForPeriod(periodKey, benefit.frequency as BenefitFrequency, annDate);
-          if (periodAnnYear !== currentAnnYear) continue;
+          periodKey = String(currentAnnYear);
+        } else {
+          periodKey = this.periodKey.getCurrentPeriodKey(freq);
         }
 
         // Check if already claimed for this period
@@ -122,9 +125,9 @@ export class DashboardComponent implements OnInit {
         const displayValue = this.periodKey.getDisplayValue(benefit, periodKey);
         const numericValue = parseFloat(displayValue.replace(/[^0-9.]/g, '')) || 0;
 
-        // For anniversary-based cards, last redeem date is anniversary date − 1 day in the next calendar year
+        // Only yearly benefits on anniversary cards use anniversary end date; others use end of month/quarter/half
         let lastRedeemDate: Date;
-        if (item.masterCard.isAnniversaryBased && item.userCard.anniversaryDate) {
+        if (useAnniversaryYear && item.userCard.anniversaryDate) {
           const annDate = new Date(item.userCard.anniversaryDate);
           const currentAnnYear = this.periodKey.getAnniversaryYearStart(annDate);
           const { end } = this.periodKey.getAnniversaryYearBounds(annDate, currentAnnYear);
@@ -246,17 +249,12 @@ export class DashboardComponent implements OnInit {
     }
   }
 
-  /** For anniversary cards, returns the current period within the selected anniversary year; otherwise calendar period. */
+  /** For anniversary cards + yearly only: use anniversary year as period key; else use calendar period. */
   getSelectedYearPeriodKey(frequency: BenefitFrequency, card?: UserCardWithMaster | null): string {
     const isAnn = card?.masterCard?.isAnniversaryBased && card?.userCard?.anniversaryDate;
-    if (isAnn && card?.userCard?.anniversaryDate) {
-      const annDate = new Date(card.userCard.anniversaryDate);
-      const currentAnnYear = this.periodKey.getAnniversaryYearStart(annDate);
-      if (this.selectedYear === currentAnnYear) {
-        return this.periodKey.getCurrentPeriodKey(frequency as BenefitFrequency);
-      }
-      const { end } = this.periodKey.getAnniversaryYearBounds(annDate, this.selectedYear);
-      return this.periodKey.getCurrentPeriodKey(frequency as BenefitFrequency, end);
+    const yearlyOnAnn = isAnn && (frequency === 'Yearly' || frequency === 'CalendarYear');
+    if (yearlyOnAnn) {
+      return String(this.selectedYear);
     }
     return this.periodKey.getCurrentPeriodKeyForYear(frequency, this.selectedYear);
   }
@@ -331,6 +329,12 @@ export class DashboardComponent implements OnInit {
     this.rebuildModalPeriods();
   }
 
+  /** True when the benefit history modal is showing anniversary-year periods (yearly on anniversary card). */
+  get isModalShowingAnniversaryYear(): boolean {
+    return !!(this.modalCard?.masterCard?.isAnniversaryBased && this.modalCard?.userCard?.anniversaryDate &&
+      this.modalBenefit && (this.modalBenefit.frequency === 'Yearly' || this.modalBenefit.frequency === 'CalendarYear'));
+  }
+
   closeModal() {
     this.modalOpen = false;
     this.modalCard = null;
@@ -349,9 +353,11 @@ export class DashboardComponent implements OnInit {
     let allowedYears: Set<number>;
 
     const addedAt = new Date(this.modalCard.userCard.createdAt || new Date().toISOString());
-    const isAnniversary = !!(this.modalCard.masterCard?.isAnniversaryBased && this.modalCard.userCard.anniversaryDate);
+    const isAnniversaryCard = !!(this.modalCard.masterCard?.isAnniversaryBased && this.modalCard.userCard.anniversaryDate);
+    const freq = this.modalBenefit.frequency as BenefitFrequency;
+    const useAnniversaryBounds = isAnniversaryCard && (freq === 'Yearly' || freq === 'CalendarYear');
 
-    if (isAnniversary && this.modalCard.userCard.anniversaryDate) {
+    if (useAnniversaryBounds && this.modalCard.userCard.anniversaryDate) {
       const annDate = new Date(this.modalCard.userCard.anniversaryDate);
       const { start, end } = this.periodKey.getAnniversaryYearBounds(annDate, this.selectedYear);
       selectedStart = start;
@@ -376,11 +382,10 @@ export class DashboardComponent implements OnInit {
     const nowQuarter = Math.floor((nowMonth - 1) / 3) + 1;
     const nowHalf = nowMonth <= 6 ? 1 : 2;
 
-    const freq = this.modalBenefit.frequency as BenefitFrequency;
-    const annDateForPeriod = isAnniversary && this.modalCard.userCard.anniversaryDate
+    const annDateForPeriod = useAnniversaryBounds && this.modalCard.userCard.anniversaryDate
       ? new Date(this.modalCard.userCard.anniversaryDate) : null;
     const addedYear = isNaN(addedAt.getTime()) ? this.currentYear : addedAt.getFullYear();
-    const allowedYearsDesc = isAnniversary
+    const allowedYearsDesc = useAnniversaryBounds
       ? `Allowed anniversary years: ${Math.min(...allowedYears)}–${Math.max(...allowedYears)}`
       : `Allowed: ${addedYear - 1}–${addedYear}`;
 

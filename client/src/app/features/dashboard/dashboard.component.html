@@ -158,7 +158,7 @@
 
           <div class="p-4 max-h-[70vh] overflow-auto">
             <p class="text-sm text-slate-600 mb-3">
-              @if (modalCard.masterCard?.isAnniversaryBased && modalCard.userCard.anniversaryDate) {
+              @if (isModalShowingAnniversaryYear) {
                 Showing anniversary year {{ selectedYear }} (from card anniversary date). You can claim periods in allowed anniversary years.
               } @else {
                 Showing {{ selectedYear }}. You can backfill the previous calendar year (relative to when the card was added).

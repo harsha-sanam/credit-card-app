@@ -85,3 +85,64 @@ The Angular UI is built and pushed to the **`docs/`** folder so it can be served
    Then commit and push the `docs/` folder.
 
 **Note:** Only the UI is hosted on GitHub Pages. The API and MongoDB must be hosted elsewhere (e.g. Render, Fly.io, MongoDB Atlas). Set the production API URL and Google Client ID in `client/src/environments/environment.production.ts` (or use build-time env) and ensure your API allows the origin `https://harsha-sanam.github.io`.
+
+## Deploy API to Fly.io
+
+The API can be deployed to [Fly.io](https://fly.io) (free tier available). From the repo root:
+
+1. **Install Fly CLI**  
+   See [fly.io/docs/hands-on/install-flyctl](https://fly.io/docs/hands-on/install-flyctl/).
+
+2. **Login and create the app (first time only)**  
+   ```bash
+   fly auth login
+   fly apps create credit-card-tracker-api
+   ```
+   If the name is taken, use e.g. `credit-card-tracker-api-YourName` and set the same name in `fly.toml` under `app = "..."`.
+
+3. **Set secrets** (do this before the first deploy) (required; these are not in the repo)  
+   ```bash
+   fly secrets set MongoDb__ConnectionString="mongodb+srv://USER:PASSWORD@cluster0.xxxxx.mongodb.net/"
+   fly secrets set Google__ClientId="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+   fly secrets set Admin__AllowedAdminEmails="your@gmail.com"
+   ```
+   Use your MongoDB Atlas URI (encode `@` in password as `%40`). The API reads these in production.
+
+4. **Deploy**  
+   ```bash
+   fly deploy --config fly.toml
+   ```
+
+5. **Open the API**  
+   ```bash
+   fly open
+   ```
+   Your API will be at `https://credit-card-tracker-api.fly.dev` (or the app name in `fly.toml`). Use this URL as `apiUrl` in the Angular production environment and add `https://harsha-sanam.github.io` to your API CORS config if needed (the default allows all origins).
+
+## Deploy API to Render.com
+
+The repo includes a **root `Dockerfile`** so Render can build the API with Docker. You can also use native .NET (no Docker).
+
+### Option A: Docker (recommended)
+
+1. In [Render](https://render.com): **New → Web Service**, connect the `credit-card-app` repo.
+2. **Settings:**
+   - **Environment:** Docker (Render will use the root `Dockerfile`).
+   - **Instance type:** Free (optional).
+3. **Environment variables** (required):
+   - `MongoDb__ConnectionString` = your MongoDB Atlas URI (encode `@` in password as `%40`)
+   - `Google__ClientId` = your Google OAuth client ID
+   - `Admin__AllowedAdminEmails` = e.g. `your@gmail.com`
+4. Deploy. Render will run `docker build` from the repo root and start the container. The API listens on port **8080** (Render sets `PORT`; the app uses `ASPNETCORE_URLS=http://0.0.0.0:8080`).
+
+### Option B: Native .NET (no Docker)
+
+1. **New → Web Service**, connect the repo.
+2. **Settings:**
+   - **Root Directory:** `src/CreditCardTracker.Api`
+   - **Build Command:** `dotnet publish -c Release -o out`
+   - **Start Command:** `dotnet out/CreditCardTracker.Api.dll`
+   - **Environment:** Add the same variables as above.
+3. Render will build and run the API without Docker. Set the service port to **8080** if asked (or add env `ASPNETCORE_URLS=http://0.0.0.0:$PORT`).
+
+Use the service URL (e.g. `https://credit-card-tracker-api.onrender.com`) as `apiUrl` in the Angular production environment.

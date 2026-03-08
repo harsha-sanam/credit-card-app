@@ -17,6 +17,11 @@ if (!BsonClassMap.IsClassMapRegistered(typeof(MasterCard)))
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Use PORT from environment (e.g. Render.com, Fly.io) when set
+var port = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrEmpty(port))
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<IGoogleTokenValidationService, GoogleTokenValidationService>();
 builder.Services.AddSingleton<IPeriodKeyService, PeriodKeyService>();

@@ -1,0 +1,11 @@
+# Root .dockerignore – used when building from repo root (e.g. Render)
+.git
+.gitignore
+.github
+client
+docs
+*.md
+*.sln
+src/CreditCardTracker.Api/bin
+src/CreditCardTracker.Api/obj
+src/CreditCardTracker.Api/appsettings.Development.json

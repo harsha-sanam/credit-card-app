@@ -70,8 +70,12 @@ var app = builder.Build();
 // CORS must be first to ensure headers are added even on errors
 app.UseCors();
 
-app.UseSwagger();
-app.UseSwaggerUI();
+app.UseSwagger(options => options.RouteTemplate = "swagger/{documentName}/swagger.json");
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "CreditCardTracker API");
+    c.RoutePrefix = "swagger"; // UI at /swagger (not /swagger/index.html)
+});
 
 app.UseAuthentication();
 app.UseAuthorization();

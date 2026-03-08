@@ -46,7 +46,7 @@
                 <div>
                   <span class="font-medium">{{ item.benefit.name }}</span>
                   <span class="text-white/80 text-sm ml-2">{{ formatBenefitValue(item.displayValue) }}</span>
-                  <span class="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full ml-2">{{ formatPeriodKey(item.periodKey, item.benefit.frequency) }}</span>
+                  <span class="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full ml-2" title="Last date to claim: {{ item.lastRedeemDate | date:'MMM d, y' }}">{{ item.lastRedeemDate | date:'MMM d' }}</span>
                   <span class="text-white/60 text-xs ml-2">· {{ item.cardName }}</span>
                 </div>
                 <div class="flex items-center gap-2">
@@ -112,19 +112,19 @@
                       class="font-medium text-slate-800 hover:underline text-left"
                       (click)="openBenefitHistory(item, benefit)"
                     >{{ benefit.name }}</button>
-                    <span class="text-slate-500 text-sm ml-2">{{ formatBenefitValue(getBenefitDisplayValue(benefit, getSelectedYearPeriodKey(benefit.frequency))) }}{{ getFrequencyAbbrev(benefit.frequency) }}</span>
+                    <span class="text-slate-500 text-sm ml-2">{{ formatBenefitValue(getBenefitDisplayValue(benefit, getSelectedYearPeriodKey(benefit.frequency, item))) }}{{ getFrequencyAbbrev(benefit.frequency) }}</span>
                     @if (benefit.description) {
                       <p class="text-sm text-slate-500 mt-0.5">{{ benefit.description }}</p>
                     }
                   </div>
                   <div class="flex items-center gap-2">
-                    @if (isUsed(benefit, item.userCard.benefitUsages)) {
+                    @if (isUsed(benefit, item.userCard.benefitUsages, item)) {
                       <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">Used</span>
                     } @else {
                       <span class="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">Available</span>
                       <button
                         type="button"
-                        (click)="claim(item.userCard.id, benefit)"
+                        (click)="claim(item.userCard.id, benefit, item)"
                         [disabled]="claimingId === benefit.id"
                         class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50"
                       >
@@ -158,7 +158,11 @@
 
           <div class="p-4 max-h-[70vh] overflow-auto">
             <p class="text-sm text-slate-600 mb-3">
-              Showing {{ selectedYear }}. You can backfill the previous calendar year (relative to when the card was added).
+              @if (modalCard.masterCard?.isAnniversaryBased && modalCard.userCard.anniversaryDate) {
+                Showing anniversary year {{ selectedYear }} (from card anniversary date). You can claim periods in allowed anniversary years.
+              } @else {
+                Showing {{ selectedYear }}. You can backfill the previous calendar year (relative to when the card was added).
+              }
             </p>
             @if (modalSummary) {
               <div class="mb-3 flex flex-wrap gap-2 text-sm">

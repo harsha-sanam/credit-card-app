@@ -130,6 +130,76 @@ export class PeriodKeyService {
   }
 
   /**
+   * Returns the start year of the anniversary year that contains the given reference date.
+   * E.g. anniversary March 15: ref Mar 10, 2026 → year 2025 (Mar 15 2025–Mar 14 2026).
+   */
+  getAnniversaryYearStart(anniversaryDate: Date, referenceDate: Date = new Date()): number {
+    const ref = new Date(referenceDate);
+    const ann = new Date(anniversaryDate);
+    if (isNaN(ref.getTime()) || isNaN(ann.getTime())) return ref.getFullYear();
+    const annMonth = ann.getMonth();
+    const annDay = ann.getDate();
+    const refYear = ref.getFullYear();
+    // Anniversary in refYear: (refYear, annMonth, annDay)
+    const annInRefYear = new Date(refYear, annMonth, annDay);
+    if (ref < annInRefYear) return refYear - 1; // we're before this year's anniversary, so in previous anniversary year
+    return refYear;
+  }
+
+  /**
+   * Returns the date range (inclusive start, inclusive end) for an anniversary year.
+   * startYear 2025 with anniversary March 15 → start = Mar 15 2025, end = Mar 14 2026.
+   */
+  getAnniversaryYearBounds(anniversaryDate: Date, startYear: number): { start: Date; end: Date } {
+    const ann = new Date(anniversaryDate);
+    const start = new Date(startYear, ann.getMonth(), ann.getDate(), 0, 0, 0);
+    const end = new Date(startYear + 1, ann.getMonth(), ann.getDate(), 23, 59, 59);
+    end.setDate(end.getDate() - 1); // day before next anniversary
+    return { start, end };
+  }
+
+  /**
+   * Returns the anniversary start year that contains the given period.
+   * E.g. period 2026-03 (March 2026), anniversary March 15 → 2026 (Mar 15 2026–Mar 14 2027).
+   */
+  getAnniversaryYearStartForPeriod(periodKey: string, frequency: BenefitFrequency, anniversaryDate: Date): number {
+    const ann = new Date(anniversaryDate);
+    if (isNaN(ann.getTime())) return parseInt(periodKey.slice(0, 4), 10);
+    let periodStart: Date;
+    switch (frequency) {
+      case 'Monthly': {
+        const year = parseInt(periodKey.slice(0, 4), 10);
+        const month = parseInt(periodKey.slice(5), 10) - 1;
+        periodStart = new Date(year, month, 1);
+        break;
+      }
+      case 'Quarterly': {
+        const year = parseInt(periodKey.slice(0, 4), 10);
+        const q = parseInt(periodKey.replace(/^\d{4}-Q/, ''), 10);
+        const month = (q - 1) * 3;
+        periodStart = new Date(year, month, 1);
+        break;
+      }
+      case 'HalfYearly': {
+        const year = parseInt(periodKey.slice(0, 4), 10);
+        const h = parseInt(periodKey.replace(/^\d{4}-H/, ''), 10);
+        const month = (h - 1) * 6;
+        periodStart = new Date(year, month, 1);
+        break;
+      }
+      case 'Yearly':
+      case 'CalendarYear': {
+        const year = parseInt(periodKey, 10);
+        periodStart = new Date(year, ann.getMonth(), ann.getDate());
+        break;
+      }
+      default:
+        return parseInt(periodKey.slice(0, 4), 10);
+    }
+    return this.getAnniversaryYearStart(ann, periodStart);
+  }
+
+  /**
    * Returns the display value for a benefit in a given period (default or period override).
    */
   getDisplayValue(benefit: Benefit, periodKey: string): string {

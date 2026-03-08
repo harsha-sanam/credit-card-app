@@ -1,0 +1,26 @@
+# Fly.io app for Credit Card Tracker API
+# Deploy from repo root: fly deploy --config fly.toml
+# Or from API folder: fly deploy (use fly.toml in same dir if you move it)
+
+app = "credit-card-tracker-api"
+
+[build]
+  dockerfile = "src/CreditCardTracker.Api/Dockerfile"
+  context = "src/CreditCardTracker.Api"
+  [build.args]
+
+[env]
+  ASPNETCORE_ENVIRONMENT = "Production"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
